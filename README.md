@@ -65,7 +65,7 @@ All data is stored in a local SQLite database (`fishing.db`) in the app director
 
 The parser handles multiple lakes per sheet, separated by blank rows. Each lake block starts with a header row containing the lake name, survey year, "ID" label, and the DNR lake ID. The sample file included has sheets like "CPUE Data 1" and "CPUE Data 2" with this format.
 
-## Mapping species
+## Mapping Species
 MN DNR provides species information in survey data in codes. These are then translated via the JS when the survey data is viewed, but not available in the JSON. I created a species map JSON, but if you find new species need to be mapped, they can be added via the browser console and the following command:
 ```
 fetch('/api/species_map', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify([{"abbreviation":"RBS","species":"Rainbow Smelt"}])})
