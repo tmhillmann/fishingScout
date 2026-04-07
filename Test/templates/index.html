@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MN Fishing Scout</title>
+    <style>
+        :root {
+            --bg: #0f1923;
+            --bg2: #162029;
+            --bg3: #1c2a35;
+            --accent: #3b9eff;
+            --accent2: #1a6fd4;
+            --green: #34d399;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --text: #e2e8f0;
+            --text2: #94a3b8;
+            --border: #2a3a48;
+            --radius: 8px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        header {
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        header h1 span { font-size: 1.5rem; }
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg);
+            border-radius: var(--radius);
+            padding: 3px;
+        }
+        .tab {
+            padding: 8px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text2);
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active {
+            background: var(--accent2);
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* Upload panel */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 48px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: var(--bg2);
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(59, 158, 255, 0.05);
+        }
+        .upload-zone h3 { margin-bottom: 8px; }
+        .upload-zone p { color: var(--text2); font-size: 0.9rem; }
+        .upload-zone input { display: none; }
+        #upload-result {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: var(--radius);
+            display: none;
+        }
+        #upload-result.success { display: block; background: rgba(52, 211, 153, 0.1); border: 1px solid var(--green); }
+        #upload-result.error { display: block; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--red); }
+
+        /* Lakes panel */
+        .lake-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .lake-card:hover { border-color: var(--accent); background: var(--bg3); }
+        .lake-card .info h3 { font-size: 1rem; margin-bottom: 4px; }
+        .lake-card .info .meta { color: var(--text2); font-size: 0.8rem; display: flex; gap: 16px; flex-wrap: wrap; }
+        .lake-card .actions { display: flex; gap: 8px; }
+
+        .btn {
+            padding: 7px 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.15s;
+        }
+        .btn:hover { border-color: var(--accent); }
+        .btn.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+        .btn.primary:hover { background: var(--accent); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Search panel */
+        .filters {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .filter-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text2);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .filter-actions {
+            margin-top: 14px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .filter-actions .result-count {
+            color: var(--text2);
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-top: 18px;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            accent-color: var(--accent);
+        }
+        .checkbox-group label {
+            text-transform: none;
+            font-size: 0.85rem;
+            color: var(--text);
+            margin: 0;
+        }
+
+        /* Results table */
+        .results-table-wrapper {
+            overflow-x: auto;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th {
+            background: var(--bg3);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text2);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        th:hover { color: var(--text); }
+        th .sort-arrow { margin-left: 4px; opacity: 0.4; }
+        th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+        td {
+            padding: 9px 12px;
+            border-top: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        tr:hover td { background: rgba(59, 158, 255, 0.04); }
+        .cpue-high { color: var(--green); font-weight: 600; }
+        .cpue-above { color: var(--orange); font-weight: 600; }
+        .cpue-low { color: var(--text2); }
+        .weight-good { color: var(--green); }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .tag.above { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
+        .tag.normal { background: rgba(148, 163, 184, 0.1); color: var(--text2); }
+
+        /* Lake detail modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 200;
+            justify-content: center;
+            align-items: start;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-width: 900px;
+            width: 100%;
+            padding: 24px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .modal-header h2 { font-size: 1.2rem; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text2);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .lake-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .stat-card .label { font-size: 0.7rem; color: var(--text2); text-transform: uppercase; }
+        .stat-card .value { font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
+
+        .loading { text-align: center; padding: 40px; color: var(--text2); }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text2); }
+        .empty-state h3 { margin-bottom: 8px; color: var(--text); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><span>🐟</span> MN Fishing Scout</h1>
+        <div class="tabs">
+            <button class="tab active" data-panel="upload-panel">Upload</button>
+            <button class="tab" data-panel="lakes-panel">Lakes</button>
+            <button class="tab" data-panel="search-panel">Search & Filter</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Upload Panel -->
+        <div id="upload-panel" class="panel active">
+            <div class="upload-zone" id="upload-zone">
+                <h3>📂 Upload CPUE Data</h3>
+                <p>Drag & drop an Excel file (.xlsx) with MN DNR CPUE survey data, or click to browse.</p>
+                <p style="margin-top:8px;font-size:0.8rem;color:var(--text2)">
+                    Expected format: Lake name, year, ID, DNR ID in row headers, with Species/Gear/CPUE/Normal Range/Avg Weight/Normal Range/Count columns.
+                </p>
+                <input type="file" id="file-input" accept=".xlsx,.xls">
+            </div>
+            <div id="upload-result"></div>
+        </div>
+
+        <!-- Lakes Panel -->
+        <div id="lakes-panel" class="panel">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+                <h2 style="font-size:1.1rem">Your Lakes</h2>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <button class="btn primary" onclick="refreshAllLakes()">🔄 Refresh All Metadata</button>
+                </div>
+            </div>
+
+            <!-- Add Lake by ID -->
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                    <span style="font-size:1.1rem">🆕</span>
+                    <strong style="font-size:0.95rem">Add Lake by DOW Number</strong>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text2);margin-bottom:12px">
+                    Enter a MN DNR DOW number (e.g. <code>16022800</code>) to fetch lake metadata and import the most recent survey data directly from the DNR website.
+                    Find DOW numbers at <a href="https://www.dnr.state.mn.us/lakefind/index.html" target="_blank" style="color:var(--accent)">DNR LakeFinder</a>.
+                </p>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input type="text" id="add-lake-id" placeholder="DOW Number (e.g. 16022800)"
+                           style="padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.9rem;width:260px"
+                           onkeydown="if(event.key==='Enter') addLakeById()">
+                    <button class="btn primary" onclick="addLakeById()" id="add-lake-btn">🔍 Add & Import Survey</button>
+                </div>
+                <div id="add-lake-result" style="margin-top:10px;display:none"></div>
+            </div>
+            <div id="lakes-list">
+                <div class="loading">Loading lakes...</div>
+            </div>
+        </div>
+
+        <!-- Search Panel -->
+        <div id="search-panel" class="panel">
+            <div class="filters">
+                <div class="filter-grid">
+                    <div class="filter-group">
+                        <label>Species</label>
+                        <select id="f-species"><option value="">All Species</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Gear Type</label>
+                        <select id="f-gear"><option value="">All Gear</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Survey Type</label>
+                        <select id="f-survey-type">
+                            <option value="standard" selected>Standard Survey Only</option>
+                            <option value="all">All Survey Types</option>
+                            <option value="targeted">Targeted Survey</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Lake Name</label>
+                        <input type="text" id="f-lake" placeholder="Search lake...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Min CPUE</label>
+                        <input type="number" id="f-min-cpue" step="0.1" placeholder="0">
+                    </div>
+                    <div class="filter-group">
+                        <label>Max CPUE</label>
+                        <input type="number" id="f-max-cpue" step="0.1" placeholder="Any">
+                    </div>
+                    <div class="filter-group">
+                        <label>Min Avg Weight (lbs)</label>
+                        <input type="number" id="f-min-weight" step="0.01" placeholder="0">
+                    </div>
+                    <div class="filter-group">
+                        <label>Max Avg Weight (lbs)</label>
+                        <input type="number" id="f-max-weight" step="0.01" placeholder="Any">
+                    </div>
+                    <div class="filter-group">
+                        <label>Survey Year (min)</label>
+                        <input type="number" id="f-min-year" placeholder="Auto: last 20yr">
+                    </div>
+                    <div class="filter-group">
+                        <label>Survey Year (max)</label>
+                        <input type="number" id="f-max-year" placeholder="Any">
+                    </div>
+                    <div class="filter-group">
+                        <label>Min Lake Area (acres)</label>
+                        <input type="number" id="f-min-area" step="0.1" placeholder="Any">
+                    </div>
+                    <div class="filter-group">
+                        <label>Min Max Depth (ft)</label>
+                        <input type="number" id="f-min-depth" step="1" placeholder="Any">
+                    </div>
+                    <div class="filter-group">
+                        <label>County</label>
+                        <select id="f-county"><option value="">All Counties</option></select>
+                    </div>
+                    <div class="filter-group checkbox-group">
+                        <input type="checkbox" id="f-above-normal">
+                        <label for="f-above-normal">Only Above-Normal CPUE</label>
+                    </div>
+                    <div class="filter-group checkbox-group">
+                        <input type="checkbox" id="f-most-recent" checked>
+                        <label for="f-most-recent">Most Recent Survey Only</label>
+                    </div>
+                </div>
+
+                <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                        <input type="checkbox" id="f-use-radius" style="accent-color:var(--accent)">
+                        <label for="f-use-radius" style="font-size:0.85rem;font-weight:600;color:var(--text)">📍 Filter by distance from a point</label>
+                    </div>
+                    <div id="radius-fields" style="display:none">
+                        <div class="filter-grid" style="grid-template-columns:repeat(auto-fill, minmax(160px, 1fr))">
+                            <div class="filter-group">
+                                <label>Latitude</label>
+                                <input type="number" id="f-lat" step="0.0001" placeholder="e.g. 44.9778">
+                            </div>
+                            <div class="filter-group">
+                                <label>Longitude</label>
+                                <input type="number" id="f-lng" step="0.0001" placeholder="e.g. -93.2650">
+                            </div>
+                            <div class="filter-group">
+                                <label>Radius (miles)</label>
+                                <input type="number" id="f-radius" step="1" value="25" placeholder="25">
+                            </div>
+                            <div class="filter-group" style="padding-top:18px">
+                                <button class="btn" onclick="useMyLocation()">📍 Use My Location</button>
+                            </div>
+                        </div>
+                        <p style="font-size:0.75rem;color:var(--text2);margin-top:6px">
+                            Requires lake metadata to be refreshed from DNR (Lakes tab → Refresh) for coordinates.
+                        </p>
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn primary" onclick="doSearch()">🔍 Search</button>
+                    <button class="btn" onclick="clearFilters()">Clear</button>
+                    <span class="result-count" id="result-count"></span>
+                </div>
+            </div>
+            <div id="search-results">
+                <div class="empty-state">
+                    <h3>Ready to search</h3>
+                    <p>Upload CPUE data and use the filters above to find great fishing lakes.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lake Detail Modal -->
+    <div class="modal-overlay" id="lake-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-lake-name">Lake</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modal-body">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // --- Tab navigation ---
+    function activateTab(panelId) {
+        const tab = document.querySelector(`.tab[data-panel="${panelId}"]`);
+        if (!tab) return;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(panelId).classList.add('active');
+        try { sessionStorage.setItem('activeTab', panelId); } catch {}
+
+        if (panelId === 'lakes-panel') loadLakes();
+        if (panelId === 'search-panel') { loadFilterOptions(); }
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => activateTab(tab.dataset.panel));
+    });
+
+    // Restore last active tab on page load
+    try {
+        const saved = sessionStorage.getItem('activeTab');
+        if (saved && document.getElementById(saved)) activateTab(saved);
+    } catch {}
+
+    // --- Upload ---
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', e => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files.length) uploadFile(fileInput.files[0]); });
+
+    async function uploadFile(file) {
+        const resultDiv = document.getElementById('upload-result');
+        resultDiv.className = '';
+        resultDiv.style.display = 'none';
+        uploadZone.innerHTML = '<h3>⏳ Uploading & parsing...</h3><p>This may take a moment.</p>';
+
+        const fd = new FormData();
+        fd.append('file', file);
+
+        try {
+            const resp = await fetch('/upload', { method: 'POST', body: fd });
+            const data = await resp.json();
+            if (data.success) {
+                resultDiv.className = 'success';
+                resultDiv.innerHTML = `<strong>✅ Upload successful!</strong><br>
+                    ${data.records_inserted} survey records imported across ${data.lakes_found} lakes.<br>
+                    <small>Lake IDs: ${data.lake_ids.join(', ')}</small>`;
+                loadFilterOptions();
+            } else {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<strong>❌ Error:</strong> ${data.error}`;
+            }
+        } catch (err) {
+            resultDiv.className = 'error';
+            resultDiv.innerHTML = `<strong>❌ Upload failed:</strong> ${err.message}`;
+        }
+
+        resultDiv.style.display = 'block';
+        uploadZone.innerHTML = `<h3>📂 Upload CPUE Data</h3>
+            <p>Drag & drop another file or click to browse.</p>
+            <input type="file" id="file-input" accept=".xlsx,.xls">`;
+        document.getElementById('file-input').addEventListener('change', function() {
+            if (this.files.length) uploadFile(this.files[0]);
+        });
+    }
+
+    // --- Lakes ---
+    async function loadLakes() {
+        const container = document.getElementById('lakes-list');
+        container.innerHTML = '<div class="loading">Loading lakes...</div>';
+
+        try {
+            const resp = await fetch('/api/lakes');
+            const lakes = await resp.json();
+            if (!lakes.length) {
+                container.innerHTML = '<div class="empty-state"><h3>No lakes yet</h3><p>Upload CPUE data to get started.</p></div>';
+                return;
+            }
+            container.innerHTML = lakes.map(l => {
+                const safeName = (l.name || l.id).replace(/"/g, '&quot;');
+                return `
+                <div class="lake-card" data-lake-id="${l.id}">
+                    <div class="info">
+                        <h3>${l.name || l.id}</h3>
+                        <div class="meta">
+                            <span>ID: ${l.id}</span>
+                            ${l.county ? `<span>📍 ${l.county} County</span>` : ''}
+                            ${l.area ? `<span>💧 ${l.area} acres</span>` : ''}
+                            ${l.max_depth ? `<span>📏 ${l.max_depth} ft deep</span>` : ''}
+                            ${l.latest_survey ? `<span>📋 Last surveyed: ${l.latest_survey}</span>` : ''}
+                            <span>${l.species_count || 0} species, ${l.total_records || 0} records</span>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn lake-refresh-btn" data-lake-id="${l.id}">🔄 Refresh</button>
+                        <button class="btn lake-delete-btn" data-lake-id="${l.id}" data-lake-name="${safeName}" style="border-color:rgba(239,68,68,0.4)">🗑️ Delete</button>
+                    </div>
+                </div>
+            `;}).join('');
+
+            // Wire up event handlers via delegation
+            container.querySelectorAll('.lake-card').forEach(card => {
+                card.addEventListener('click', e => {
+                    // Ignore clicks on buttons inside the card
+                    if (e.target.closest('button')) return;
+                    openLakeDetail(card.dataset.lakeId);
+                });
+            });
+            container.querySelectorAll('.lake-refresh-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    refreshLake(btn.dataset.lakeId, btn);
+                });
+            });
+            container.querySelectorAll('.lake-delete-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    deleteLake(btn.dataset.lakeId, btn.dataset.lakeName);
+                });
+            });
+        } catch (err) {
+            container.innerHTML = `<div class="empty-state"><h3>Error loading lakes</h3><p>${err.message}</p></div>`;
+        }
+    }
+
+    async function refreshLake(id, btn) {
+        if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+        try {
+            await fetch(`/api/lakes/${id}/refresh`, { method: 'POST' });
+            loadLakes();
+        } catch (err) {
+            alert('Failed to refresh: ' + err.message);
+        }
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 Refresh'; }
+    }
+
+    async function deleteLake(id, name) {
+        if (!confirm(`Delete "${name}" (${id}) and all its survey data?\n\nThis cannot be undone.`)) return;
+        try {
+            const resp = await fetch(`/api/lakes/${id}`, { method: 'DELETE' });
+            const data = await resp.json();
+            if (data.success) {
+                loadLakes();
+                loadFilterOptions();
+            } else {
+                alert('Failed to delete: ' + (data.error || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('Failed to delete: ' + err.message);
+        }
+    }
+
+    async function refreshAllLakes() {
+        const resp = await fetch('/api/lakes');
+        const lakes = await resp.json();
+        for (const l of lakes) {
+            try { await fetch(`/api/lakes/${l.id}/refresh`, { method: 'POST' }); } catch {}
+        }
+        loadLakes();
+    }
+
+    async function addLakeById() {
+        const input = document.getElementById('add-lake-id');
+        const btn = document.getElementById('add-lake-btn');
+        const resultDiv = document.getElementById('add-lake-result');
+        const lakeId = input.value.trim().replace(/-/g, '');
+
+        if (!lakeId) {
+            resultDiv.style.display = 'block';
+            resultDiv.style.color = 'var(--red)';
+            resultDiv.textContent = 'Please enter a DOW number.';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Fetching...';
+        resultDiv.style.display = 'block';
+        resultDiv.style.color = 'var(--text2)';
+        resultDiv.textContent = 'Contacting DNR servers — fetching metadata and survey data...';
+
+        try {
+            const resp = await fetch('/api/lakes/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lake_id: lakeId})
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                let msg = `✅ Added <strong>${data.lake_name}</strong> (${data.lake_id})`;
+                if (data.metadata_found) msg += ' — metadata loaded';
+                if (data.survey_records_imported > 0) {
+                    msg += ` — ${data.survey_records_imported} survey records imported`;
+                    if (data.survey_years.length) msg += ` (${data.survey_years.join(', ')})`;
+                }
+                if (data.warnings && data.warnings.length) {
+                    msg += `<br><span style="color:var(--orange);font-size:0.8rem">⚠️ ${data.warnings.join(' ')}</span>`;
+                }
+                resultDiv.style.color = 'var(--green)';
+                resultDiv.innerHTML = msg;
+                input.value = '';
+                loadLakes();
+                loadFilterOptions();
+            } else {
+                resultDiv.style.color = 'var(--red)';
+                resultDiv.textContent = '❌ ' + (data.error || 'Unknown error');
+            }
+        } catch (err) {
+            resultDiv.style.color = 'var(--red)';
+            resultDiv.textContent = '❌ Request failed: ' + err.message;
+        }
+
+        btn.disabled = false;
+        btn.textContent = '🔍 Add & Import Survey';
+    }
+
+    // --- Lake Detail Modal ---
+    async function openLakeDetail(id) {
+        const modal = document.getElementById('lake-modal');
+        const body = document.getElementById('modal-body');
+        modal.classList.add('open');
+        body.innerHTML = '<div class="loading">Loading lake details...</div>';
+
+        try {
+            const resp = await fetch(`/api/lakes/${id}`);
+            const data = await resp.json();
+            const lake = data.lake;
+            const surveys = data.surveys;
+
+            document.getElementById('modal-lake-name').textContent = `${lake.name || id} Lake`;
+
+            let statsHtml = '<div class="lake-stats">';
+            if (lake.county) statsHtml += statCard('County', lake.county);
+            if (lake.nearest_town) statsHtml += statCard('Near', lake.nearest_town);
+            if (lake.area) statsHtml += statCard('Area', lake.area + ' ac');
+            if (lake.max_depth) statsHtml += statCard('Max Depth', lake.max_depth + ' ft');
+            if (lake.mean_depth) statsHtml += statCard('Mean Depth', lake.mean_depth + ' ft');
+            if (lake.littoral_area) statsHtml += statCard('Littoral', lake.littoral_area + ' ac');
+            statsHtml += '</div>';
+
+            // Group surveys by year
+            const byYear = {};
+            surveys.forEach(s => {
+                if (!byYear[s.survey_year]) byYear[s.survey_year] = [];
+                byYear[s.survey_year].push(s);
+            });
+
+            let surveysHtml = '';
+            Object.keys(byYear).sort((a, b) => b - a).forEach(year => {
+                surveysHtml += `<h3 style="margin:16px 0 8px;font-size:0.95rem">Survey: ${year}</h3>`;
+                surveysHtml += `<div class="results-table-wrapper"><table>
+                    <tr><th>Species</th><th>Gear</th><th>CPUE</th><th>Normal Range</th>
+                        <th>Avg Wt (lbs)</th><th>Wt Range</th><th>Count</th></tr>`;
+                byYear[year].forEach(s => {
+                    const cpueClass = getCpueClass(s.cpue, s.normal_range_cpue);
+                    surveysHtml += `<tr>
+                        <td>${s.species}</td><td>${s.gear}</td>
+                        <td class="${cpueClass}">${s.cpue ?? '-'}</td>
+                        <td>${s.normal_range_cpue || '-'}</td>
+                        <td>${s.avg_weight ?? '-'}</td>
+                        <td>${s.normal_range_weight || '-'}</td>
+                        <td>${s.count ?? '-'}</td>
+                    </tr>`;
+                });
+                surveysHtml += '</table></div>';
+            });
+
+            body.innerHTML = statsHtml + surveysHtml;
+        } catch (err) {
+            body.innerHTML = `<p>Error loading details: ${err.message}</p>`;
+        }
+    }
+
+    function closeModal() { document.getElementById('lake-modal').classList.remove('open'); }
+    document.getElementById('lake-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeModal();
+    });
+
+    function statCard(label, value) {
+        return `<div class="stat-card"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+    }
+
+    function getCpueClass(cpue, normalRange) {
+        if (!normalRange || !cpue) return '';
+        const parts = String(normalRange).split('-');
+        if (parts.length === 2) {
+            const high = parseFloat(parts[1]);
+            if (!isNaN(high) && cpue > high) return 'cpue-above';
+        }
+        return '';
+    }
+
+    // --- Search ---
+    async function loadFilterOptions() {
+        try {
+            const [speciesResp, gearResp, countyResp] = await Promise.all([
+                fetch('/api/species'), fetch('/api/gears'), fetch('/api/counties')
+            ]);
+            const species = await speciesResp.json();
+            const gears = await gearResp.json();
+            const counties = await countyResp.json();
+
+            const speciesSelect = document.getElementById('f-species');
+            const prevSpecies = speciesSelect.value;
+            speciesSelect.innerHTML = '<option value="">All Species</option>';
+            species.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s; opt.textContent = s;
+                speciesSelect.appendChild(opt);
+            });
+            speciesSelect.value = prevSpecies;
+
+            const gearSelect = document.getElementById('f-gear');
+            const prevGear = gearSelect.value;
+            gearSelect.innerHTML = '<option value="">All Gear</option>';
+            gears.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g; opt.textContent = g;
+                gearSelect.appendChild(opt);
+            });
+            gearSelect.value = prevGear;
+
+            const countySelect = document.getElementById('f-county');
+            const prevCounty = countySelect.value;
+            countySelect.innerHTML = '<option value="">All Counties</option>';
+            counties.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                countySelect.appendChild(opt);
+            });
+            countySelect.value = prevCounty;
+        } catch {}
+    }
+
+    // Radius toggle
+    document.getElementById('f-use-radius').addEventListener('change', function() {
+        document.getElementById('radius-fields').style.display = this.checked ? 'block' : 'none';
+        if (!this.checked) doSearch();
+    });
+
+    function useMyLocation() {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser.');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(pos => {
+            document.getElementById('f-lat').value = pos.coords.latitude.toFixed(4);
+            document.getElementById('f-lng').value = pos.coords.longitude.toFixed(4);
+            doSearch();
+        }, err => {
+            alert('Could not get your location: ' + err.message);
+        });
+    }
+
+    // Auto-search when any filter changes
+    document.querySelectorAll('.filters select, .filters input[type="checkbox"]').forEach(el => {
+        el.addEventListener('change', () => doSearch());
+    });
+    // Debounced auto-search for text/number inputs
+    let searchTimeout;
+    document.querySelectorAll('.filters input[type="text"], .filters input[type="number"]').forEach(el => {
+        el.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => doSearch(), 400);
+        });
+    });
+
+    async function doSearch() {
+        const params = new URLSearchParams();
+        const val = (id) => document.getElementById(id).value.trim();
+
+        if (val('f-species')) params.set('species', val('f-species'));
+        if (val('f-gear')) params.set('gear', val('f-gear'));
+        if (val('f-lake')) params.set('lake_name', val('f-lake'));
+        if (val('f-min-cpue')) params.set('min_cpue', val('f-min-cpue'));
+        if (val('f-max-cpue')) params.set('max_cpue', val('f-max-cpue'));
+        if (val('f-min-weight')) params.set('min_weight', val('f-min-weight'));
+        if (val('f-max-weight')) params.set('max_weight', val('f-max-weight'));
+        if (val('f-min-year')) params.set('min_year', val('f-min-year'));
+        if (val('f-max-year')) params.set('max_year', val('f-max-year'));
+        if (val('f-min-area')) params.set('min_area', val('f-min-area'));
+        if (val('f-min-depth')) params.set('min_depth', val('f-min-depth'));
+        if (val('f-county')) params.set('county', val('f-county'));
+        params.set('survey_type', val('f-survey-type'));
+        if (document.getElementById('f-above-normal').checked) params.set('above_normal', 'true');
+        if (!document.getElementById('f-most-recent').checked) params.set('most_recent', 'false');
+
+        const useRadius = document.getElementById('f-use-radius').checked;
+        if (useRadius && val('f-lat') && val('f-lng') && val('f-radius')) {
+            params.set('lat', val('f-lat'));
+            params.set('lng', val('f-lng'));
+            params.set('radius', val('f-radius'));
+        }
+
+        const container = document.getElementById('search-results');
+        container.innerHTML = '<div class="loading">Searching...</div>';
+
+        try {
+            const resp = await fetch('/api/search?' + params.toString());
+            const results = await resp.json();
+            document.getElementById('result-count').textContent = `${results.length} result${results.length !== 1 ? 's' : ''}`;
+
+            if (!results.length) {
+                container.innerHTML = '<div class="empty-state"><h3>No results</h3><p>Try broadening your filters.</p></div>';
+                return;
+            }
+
+            const showDist = results.some(r => r.distance_miles != null);
+
+            let html = `<div class="results-table-wrapper"><table>
+                <thead><tr>
+                    <th onclick="sortResults('display_name')">Lake <span class="sort-arrow">↕</span></th>
+                    ${showDist ? '<th onclick="sortResults(\'distance_miles\')">Dist <span class="sort-arrow">↕</span></th>' : ''}
+                    <th onclick="sortResults('species')">Species <span class="sort-arrow">↕</span></th>
+                    <th onclick="sortResults('gear')">Gear <span class="sort-arrow">↕</span></th>
+                    <th onclick="sortResults('cpue')">CPUE <span class="sort-arrow">↕</span></th>
+                    <th>Normal Range</th>
+                    <th>Status</th>
+                    <th onclick="sortResults('avg_weight')">Avg Wt <span class="sort-arrow">↕</span></th>
+                    <th>Wt Range</th>
+                    <th onclick="sortResults('count')">Count <span class="sort-arrow">↕</span></th>
+                    <th onclick="sortResults('survey_year')">Year <span class="sort-arrow">↕</span></th>
+                    <th>Area</th>
+                    <th>Depth</th>
+                    <th onclick="sortResults('lake_id')">Lake ID <span class="sort-arrow">↕</span></th>
+                </tr></thead><tbody>`;
+
+            results.forEach(r => {
+                const cpueClass = getCpueClass(r.cpue, r.normal_range_cpue);
+                const status = getStatus(r.cpue, r.normal_range_cpue);
+                html += `<tr onclick="openLakeDetail('${r.lake_id}')" style="cursor:pointer">
+                    <td><strong>${r.display_name || r.lake_id}</strong></td>
+                    ${showDist ? `<td>${r.distance_miles != null ? r.distance_miles + ' mi' : '-'}</td>` : ''}
+                    <td>${r.species}</td>
+                    <td>${r.gear}</td>
+                    <td class="${cpueClass}">${r.cpue ?? '-'}</td>
+                    <td>${r.normal_range_cpue || '-'}</td>
+                    <td>${status}</td>
+                    <td>${r.avg_weight ?? '-'}</td>
+                    <td>${r.normal_range_weight || '-'}</td>
+                    <td>${r.count ?? '-'}</td>
+                    <td>${r.survey_year || '-'}</td>
+                    <td>${r.area ? r.area + ' ac' : '-'}</td>
+                    <td>${r.max_depth ? r.max_depth + ' ft' : '-'}</td>
+                    <td style="color:var(--text2);font-size:0.8rem">${r.lake_id}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+            currentResults = results;
+        } catch (err) {
+            container.innerHTML = `<div class="empty-state"><h3>Search failed</h3><p>${err.message}</p></div>`;
+        }
+    }
+
+    function getStatus(cpue, normalRange) {
+        if (!normalRange || !cpue) return '<span class="tag normal">N/A</span>';
+        const parts = String(normalRange).split('-');
+        if (parts.length === 2) {
+            const low = parseFloat(parts[0]);
+            const high = parseFloat(parts[1]);
+            if (!isNaN(high) && cpue > high) return '<span class="tag above">Above Normal</span>';
+            if (!isNaN(low) && cpue < low) return '<span class="tag normal">Below Normal</span>';
+            return '<span class="tag normal">Normal</span>';
+        }
+        return '<span class="tag normal">-</span>';
+    }
+
+    let currentResults = [];
+    let sortKey = '';
+    let sortAsc = true;
+
+    function sortResults(key) {
+        if (sortKey === key) { sortAsc = !sortAsc; }
+        else { sortKey = key; sortAsc = key === 'display_name' || key === 'species'; }
+
+        currentResults.sort((a, b) => {
+            let va = a[key], vb = b[key];
+            if (va == null) va = sortAsc ? Infinity : -Infinity;
+            if (vb == null) vb = sortAsc ? Infinity : -Infinity;
+            if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            return sortAsc ? va - vb : vb - va;
+        });
+
+        // Re-render
+        const tbody = document.querySelector('#search-results tbody');
+        if (!tbody) return;
+        const showDist = currentResults.some(r => r.distance_miles != null);
+        tbody.innerHTML = currentResults.map(r => {
+            const cpueClass = getCpueClass(r.cpue, r.normal_range_cpue);
+            const status = getStatus(r.cpue, r.normal_range_cpue);
+            return `<tr onclick="openLakeDetail('${r.lake_id}')" style="cursor:pointer">
+                <td><strong>${r.display_name || r.lake_id}</strong></td>
+                ${showDist ? `<td>${r.distance_miles != null ? r.distance_miles + ' mi' : '-'}</td>` : ''}
+                <td>${r.species}</td><td>${r.gear}</td>
+                <td class="${cpueClass}">${r.cpue ?? '-'}</td>
+                <td>${r.normal_range_cpue || '-'}</td><td>${status}</td>
+                <td>${r.avg_weight ?? '-'}</td><td>${r.normal_range_weight || '-'}</td>
+                <td>${r.count ?? '-'}</td><td>${r.survey_year || '-'}</td>
+                <td>${r.area ? r.area + ' ac' : '-'}</td>
+                <td>${r.max_depth ? r.max_depth + ' ft' : '-'}</td>
+                <td style="color:var(--text2);font-size:0.8rem">${r.lake_id}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function clearFilters() {
+        ['f-species', 'f-gear', 'f-county', 'f-lake', 'f-min-cpue', 'f-max-cpue',
+         'f-min-weight', 'f-max-weight', 'f-min-year', 'f-max-year',
+         'f-min-area', 'f-min-depth'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el.tagName === 'SELECT') el.selectedIndex = 0;
+            else el.value = '';
+        });
+        document.getElementById('f-survey-type').value = 'standard';
+        document.getElementById('f-above-normal').checked = false;
+        document.getElementById('f-most-recent').checked = true;
+        document.getElementById('f-use-radius').checked = false;
+        document.getElementById('radius-fields').style.display = 'none';
+        document.getElementById('f-lat').value = '';
+        document.getElementById('f-lng').value = '';
+        document.getElementById('f-radius').value = '25';
+        document.getElementById('result-count').textContent = '';
+        document.getElementById('search-results').innerHTML =
+            '<div class="empty-state"><h3>Ready to search</h3><p>Use the filters above to find great fishing lakes.</p></div>';
+    }
+    </script>
+</body>
+</html>
