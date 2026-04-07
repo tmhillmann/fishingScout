@@ -63,4 +63,4 @@ All data is stored in a local SQLite database (`fishing.db`) in the app director
 
 ## Excel Format Notes
 
-The parser handles multiple lakes per sheet, separated by blank rows. Each lake block starts with a header row containing the lake name, survey year, "ID" label, and the DNR lake ID. The sample file included has sheets like "CPUE Data - Todd" and "CPUE Data - Toby" with this format.
+The parser handles multiple lakes per sheet, separated by blank rows. Each lake block starts with a header row containing the lake name, survey year, "ID" label, and the DNR lake ID. The sample file included has sheets like "CPUE Data 1" and "CPUE Data 2" with this format.
