@@ -324,9 +324,6 @@
         <div id="lakes-panel" class="panel">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
                 <h2 style="font-size:1.1rem">Your Lakes</h2>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    <button class="btn primary" onclick="refreshAllLakes()">🔄 Refresh All Metadata</button>
-                </div>
             </div>
 
             <!-- Add Lake by ID -->
@@ -346,6 +343,13 @@
                     <button class="btn primary" onclick="addLakeById()" id="add-lake-btn">🔍 Add & Import Survey</button>
                 </div>
                 <div id="add-lake-result" style="margin-top:10px;display:none"></div>
+            </div>
+            <!-- Filter lakes list -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+                <input type="text" id="lakes-filter" placeholder="Filter by lake name or DOW ID..."
+                       style="padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.9rem;width:100%;max-width:400px"
+                       oninput="filterLakeCards()">
+                <button class="btn primary" onclick="refreshAllLakes()">🔄 Refresh All Metadata</button>
             </div>
             <div id="lakes-list">
                 <div class="loading">Loading lakes...</div>
@@ -646,6 +650,15 @@
             try { await fetch(`/api/lakes/${l.id}/refresh`, { method: 'POST' }); } catch {}
         }
         loadLakes();
+    }
+
+    function filterLakeCards() {
+        const query = document.getElementById('lakes-filter').value.toLowerCase().trim();
+        document.querySelectorAll('#lakes-list .lake-card').forEach(card => {
+            const id = (card.dataset.lakeId || '').toLowerCase();
+            const name = (card.querySelector('.info h3')?.textContent || '').toLowerCase();
+            card.style.display = (id.includes(query) || name.includes(query)) ? '' : 'none';
+        });
     }
 
     async function addLakeById() {
