@@ -501,11 +501,11 @@
         tab.addEventListener('click', () => activateTab(tab.dataset.panel));
     });
 
-    // Restore last active tab on page load
+    // Restore last active tab on page load, default to Lakes
     try {
         const saved = sessionStorage.getItem('activeTab');
-        if (saved && document.getElementById(saved)) activateTab(saved);
-    } catch {}
+        activateTab(saved && document.getElementById(saved) ? saved : 'lakes-panel');
+    } catch { activateTab('lakes-panel'); }
 
     // --- Upload ---
     const uploadZone = document.getElementById('upload-zone');
