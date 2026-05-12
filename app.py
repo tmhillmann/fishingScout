@@ -3,9 +3,11 @@ import json
 import re
 import sqlite3
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, redirect, url_for, g
+from io import BytesIO
+from flask import Flask, render_template, request, jsonify, redirect, url_for, g, send_file
 from werkzeug.utils import secure_filename
 import openpyxl
+from openpyxl.styles import Font
 import requests
 
 app = Flask(__name__)
@@ -750,6 +752,96 @@ def _haversine_miles(lat1, lon1, lat2, lon2):
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+def _compute_status(cpue, normal_range):
+    """Return 'Above Normal' / 'Normal' / 'Below Normal' / 'N/A' for export."""
+    if cpue is None or not normal_range:
+        return 'N/A'
+    parts = str(normal_range).split('-')
+    if len(parts) != 2:
+        return 'N/A'
+    try:
+        low = float(parts[0])
+        high = float(parts[1])
+    except ValueError:
+        return 'N/A'
+    if cpue > high:
+        return 'Above Normal'
+    if cpue < low:
+        return 'Below Normal'
+    return 'Normal'
+
+
+@app.route('/api/search/export', methods=['POST'])
+def api_search_export():
+    """Build an .xlsx file from the search results passed in by the client.
+    Accepts JSON: {"results": [...]} matching the shape returned by /api/search.
+    The client passes its currently-displayed (and possibly client-sorted) rows
+    so the export matches what the user sees."""
+    try:
+        data = request.get_json(force=True) or {}
+    except Exception:
+        data = {}
+    results = data.get('results') or []
+
+    show_dist = any(r.get('distance_miles') is not None for r in results)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Search Results'
+
+    headers = ['Lake']
+    if show_dist:
+        headers.append('Distance (mi)')
+    headers.extend([
+        'Species', 'Gear', 'CPUE', 'Normal Range (CPUE)', 'Status',
+        'Avg Weight (lbs)', 'Weight Range', 'Count', 'Survey Year',
+        'Area (ac)', 'Max Depth (ft)', 'Lake ID',
+    ])
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    for r in results:
+        cpue = r.get('cpue')
+        row = [r.get('display_name') or r.get('lake_id')]
+        if show_dist:
+            row.append(r.get('distance_miles'))
+        row.extend([
+            r.get('species'),
+            r.get('gear'),
+            cpue,
+            r.get('normal_range_cpue'),
+            _compute_status(cpue, r.get('normal_range_cpue')),
+            r.get('avg_weight'),
+            r.get('normal_range_weight'),
+            r.get('count'),
+            r.get('survey_year'),
+            r.get('area'),
+            r.get('max_depth'),
+            r.get('lake_id'),
+        ])
+        ws.append(row)
+
+    # Freeze the header row and approximate column widths
+    ws.freeze_panes = 'A2'
+    for col in ws.columns:
+        values = [cell.value for cell in col if cell.value is not None]
+        max_length = max((len(str(v)) for v in values), default=10)
+        ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 40)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    return send_file(
+        buf,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'fishing_search_{timestamp}.xlsx',
+    )
+
+
 @app.route('/api/species')
 def api_species():
     db = get_db()
@@ -757,6 +849,27 @@ def api_species():
         SELECT DISTINCT species FROM survey_data ORDER BY species
     ''').fetchall()
     return jsonify([r['species'] for r in species])
+
+
+@app.route('/api/species/unknown')
+def api_unknown_species():
+    """List species in survey_data that look like raw abbreviations and aren't
+    in SPECIES_MAP yet. Returns [{abbreviation, count}, ...]."""
+    _load_species_map_file()
+    db = get_db()
+    rows = db.execute('''
+        SELECT species, COUNT(*) as cnt
+        FROM survey_data
+        WHERE species IS NOT NULL AND species != ''
+        GROUP BY species
+        ORDER BY species
+    ''').fetchall()
+    unknown = []
+    for row in rows:
+        sp = row['species']
+        if sp and sp.isalnum() and sp == sp.upper() and 2 <= len(sp) <= 5 and sp not in SPECIES_MAP:
+            unknown.append({'abbreviation': sp, 'count': row['cnt']})
+    return jsonify(unknown)
 
 
 @app.route('/api/gears')

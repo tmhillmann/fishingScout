@@ -457,6 +457,8 @@
                 <div class="filter-actions">
                     <button class="btn primary" onclick="doSearch()">🔍 Search</button>
                     <button class="btn" onclick="clearFilters()">Clear</button>
+                    <button class="btn" id="export-btn" onclick="exportToXlsx()" disabled>📊 Export to .xlsx</button>
+                    <button class="btn" onclick="openSpeciesRemap()">🔤 Remap Species</button>
                     <span class="result-count" id="result-count"></span>
                 </div>
             </div>
@@ -477,6 +479,19 @@
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <div id="modal-body">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Species Remap Modal -->
+    <div class="modal-overlay" id="species-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>🔤 Remap Unknown Species</h2>
+                <button class="modal-close" onclick="closeSpeciesModal()">&times;</button>
+            </div>
+            <div id="species-modal-body">
                 <div class="loading">Loading...</div>
             </div>
         </div>
@@ -901,8 +916,10 @@
             const resp = await fetch('/api/search?' + params.toString());
             const results = await resp.json();
             document.getElementById('result-count').textContent = `${results.length} result${results.length !== 1 ? 's' : ''}`;
+            document.getElementById('export-btn').disabled = !results.length;
 
             if (!results.length) {
+                currentResults = [];
                 container.innerHTML = '<div class="empty-state"><h3>No results</h3><p>Try broadening your filters.</p></div>';
                 return;
             }
@@ -1007,6 +1024,159 @@
         }).join('');
     }
 
+    async function exportToXlsx() {
+        if (!currentResults.length) return;
+        const btn = document.getElementById('export-btn');
+        const orig = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ Exporting...';
+        try {
+            const resp = await fetch('/api/search/export', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({results: currentResults})
+            });
+            if (!resp.ok) throw new Error('Server returned ' + resp.status);
+
+            let filename = 'fishing_search.xlsx';
+            const cd = resp.headers.get('Content-Disposition') || '';
+            const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+            if (m) filename = decodeURIComponent(m[1]);
+
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            alert('Export failed: ' + err.message);
+        }
+        btn.textContent = orig;
+        btn.disabled = !currentResults.length;
+    }
+
+    // --- Species Remap ---
+    async function openSpeciesRemap() {
+        const modal = document.getElementById('species-modal');
+        const body = document.getElementById('species-modal-body');
+        modal.classList.add('open');
+        body.innerHTML = '<div class="loading">Looking for unknown species...</div>';
+
+        try {
+            const resp = await fetch('/api/species/unknown');
+            const unknown = await resp.json();
+
+            if (!unknown.length) {
+                body.innerHTML = `
+                    <div style="padding:20px;text-align:center">
+                        <p style="color:var(--green);margin-bottom:8px">✅ No unknown species found.</p>
+                        <p style="color:var(--text2);font-size:0.85rem">
+                            All abbreviation-style species in your database are already mapped in <code>species_map.json</code>.
+                        </p>
+                    </div>`;
+                return;
+            }
+
+            let html = `
+                <p style="margin-bottom:14px;color:var(--text2);font-size:0.85rem">
+                    Found <strong style="color:var(--text)">${unknown.length}</strong> unknown species abbreviation${unknown.length !== 1 ? 's' : ''} in your data.
+                    Enter the common name for each (e.g. <em>walleye</em>). Leave blank to skip.
+                    Saving updates <code>species_map.json</code> and retranslates all existing database records.
+                </p>
+                <div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px 14px;align-items:center;margin-bottom:18px">
+                    <div style="font-size:0.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px">Abbrev</div>
+                    <div style="font-size:0.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px">Common Name</div>
+                    <div style="font-size:0.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px">Records</div>`;
+
+            unknown.forEach(u => {
+                html += `
+                    <div style="font-family:monospace;font-weight:600;color:var(--accent)">${u.abbreviation}</div>
+                    <input type="text" data-abbrev="${u.abbreviation}" placeholder="e.g. walleye"
+                           style="padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem;width:100%">
+                    <div style="color:var(--text2);font-size:0.8rem;white-space:nowrap">${u.count} record${u.count !== 1 ? 's' : ''}</div>`;
+            });
+
+            html += `</div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center">
+                    <div id="species-remap-result" style="margin-right:auto;font-size:0.85rem"></div>
+                    <button class="btn" onclick="closeSpeciesModal()">Cancel</button>
+                    <button class="btn primary" id="species-save-btn" onclick="saveSpeciesRemap()">💾 Save Mappings</button>
+                </div>`;
+            body.innerHTML = html;
+
+            // Focus first input
+            const firstInput = body.querySelector('input[data-abbrev]');
+            if (firstInput) firstInput.focus();
+        } catch (err) {
+            body.innerHTML = `<p style="color:var(--red);padding:20px">Error: ${err.message}</p>`;
+        }
+    }
+
+    function closeSpeciesModal() {
+        document.getElementById('species-modal').classList.remove('open');
+    }
+
+    async function saveSpeciesRemap() {
+        const inputs = document.querySelectorAll('#species-modal-body input[data-abbrev]');
+        const mappings = [];
+        inputs.forEach(input => {
+            const abbrev = input.dataset.abbrev;
+            const name = input.value.trim();
+            if (name) mappings.push({abbreviation: abbrev, species: name});
+        });
+
+        const resultDiv = document.getElementById('species-remap-result');
+        const saveBtn = document.getElementById('species-save-btn');
+
+        if (!mappings.length) {
+            resultDiv.style.color = 'var(--orange)';
+            resultDiv.textContent = 'Enter at least one common name to save.';
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = '⏳ Saving...';
+        resultDiv.style.color = 'var(--text2)';
+        resultDiv.textContent = 'Updating database...';
+
+        try {
+            const resp = await fetch('/api/species_map', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(mappings)
+            });
+            const data = await resp.json();
+            if (data.success) {
+                resultDiv.style.color = 'var(--green)';
+                resultDiv.innerHTML = `✅ Saved ${mappings.length} mapping${mappings.length !== 1 ? 's' : ''}, updated ${data.db_records_updated} record${data.db_records_updated !== 1 ? 's' : ''}.`;
+                loadFilterOptions();
+                setTimeout(() => {
+                    closeSpeciesModal();
+                    doSearch();
+                }, 1200);
+            } else {
+                resultDiv.style.color = 'var(--red)';
+                resultDiv.textContent = '❌ ' + (data.error || 'Unknown error');
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Save Mappings';
+            }
+        } catch (err) {
+            resultDiv.style.color = 'var(--red)';
+            resultDiv.textContent = '❌ Save failed: ' + err.message;
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Save Mappings';
+        }
+    }
+
+    // Close species modal on backdrop click
+    document.getElementById('species-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeSpeciesModal();
+    });
+
     function clearFilters() {
         ['f-species', 'f-gear', 'f-county', 'f-lake', 'f-min-cpue', 'f-max-cpue',
          'f-min-weight', 'f-max-weight', 'f-min-year', 'f-max-year',
@@ -1024,6 +1194,8 @@
         document.getElementById('f-lng').value = '';
         document.getElementById('f-radius').value = '25';
         document.getElementById('result-count').textContent = '';
+        document.getElementById('export-btn').disabled = true;
+        currentResults = [];
         document.getElementById('search-results').innerHTML =
             '<div class="empty-state"><h3>Ready to search</h3><p>Use the filters above to find great fishing lakes.</p></div>';
     }
