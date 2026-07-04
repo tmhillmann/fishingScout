@@ -180,6 +180,11 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-# 
+# Agents
 CLAUDE.md
+agents.md
+codex.md
+skills/
+
+# Images
 /marketing
